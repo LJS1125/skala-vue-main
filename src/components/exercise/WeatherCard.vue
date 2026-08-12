@@ -39,9 +39,7 @@ const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
       <p class="meta">💧 습도 {{ city.humidity }}% · 🌬️ 바람 {{ city.wind }}m/s</p>
     </div>
 
-    <button class="detail-btn" @click.stop="emit('click-detail', city.name, city.status)">
-      상세보기
-    </button>
+    <button class="detail-btn" @click.stop="emit('click-detail', city)">상세보기</button>
   </div>
 </template>
 

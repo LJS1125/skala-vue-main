@@ -1,66 +1,175 @@
 <script setup>
-import { useRouter } from 'vue-router'
+const features = [
+  {
+    icon: '🔍',
+    title: '도시별 날씨 한눈에 보기',
+    desc: '검색, 정렬, 즐겨찾기로 원하는 도시의 날씨를 빠르게 확인하세요.',
+  },
+  {
+    icon: '📈',
+    title: '시간대별 기온 변화 확인',
+    desc: '오늘의 여정에서 하루 동안의 기온 흐름을 살펴보세요.',
+  },
+  {
+    icon: '🎒',
+    title: '날씨 맞춤 준비물 체크리스트',
+    desc: '우산, 겉옷, 자외선 차단제까지 오늘 챙길 것을 알려드려요.',
+  },
+  {
+    icon: '🗺️',
+    title: '지도로 보는 전국 날씨',
+    desc: '지도 위에서 전국 도시의 날씨를 한눈에 비교해보세요.',
+  },
+]
 
-const router = useRouter()
-
-const handleGoHome = () => {
-  router.push('/')
-}
+const usageTips = [
+  '도시 카드의 상세보기를 누르면 하루 기온 변화를 볼 수 있어요.',
+  '상세 페이지의 "오늘 뭐 챙길까요?" 버튼으로 준비물 체크리스트로 이동해요.',
+  '지도에서 도시 점을 클릭하면 바로 상세 페이지로 이동해요.',
+]
 </script>
 
 <template>
-  <div>
-    <h3>ℹ️ 서비스 소개</h3>
-    <hr />
+  <div class="about-page">
+    <h2 class="about-title">ℹ️ 서비스 소개</h2>
+    <p class="tagline">
+      전국 도시의 날씨를 한눈에 확인하고, 오늘 뭘 챙겨야 할지까지 알려주는 날씨 대시보드예요.
+    </p>
 
-    <div class="description-box">
-      <p>본 앱은 <strong>Vue 3</strong> 및 <strong>Vue Router 4</strong> 기반 제작된 실습용 기상 관측 대시보드 시스템입니다.</p>
-      <ul>
-        <li><code>components/exercise/</code> 폴더 내부의 독립 부품 연동</li>
-        <li>클라이언트 사이드 라우팅을 통한 새로고침 없는 화면 전환</li>
-        <li>URL 쿼리 스트링 매핑을 활용한 실시간 검색 상태 동기화</li>
+    <ul class="feature-grid">
+      <li v-for="feature in features" :key="feature.title" class="feature-card">
+        <span class="feature-icon">{{ feature.icon }}</span>
+        <p class="feature-title">{{ feature.title }}</p>
+        <p class="feature-desc">{{ feature.desc }}</p>
+      </li>
+    </ul>
+
+    <section class="usage-section">
+      <h3 class="usage-title">💡 이렇게 사용해보세요</h3>
+      <ul class="usage-list">
+        <li v-for="tip in usageTips" :key="tip">{{ tip }}</li>
       </ul>
-    </div>
+    </section>
 
-    <button @click="handleGoHome" class="home-btn">대시보드 홈으로 이동</button>
+    <footer class="dev-info">
+      <h4 class="dev-info-title">개발 정보</h4>
+      <p class="dev-info-stack">Vue 3 · Vue Router 4 · Vite</p>
+    </footer>
+
+    <RouterLink to="/" class="home-btn">메인 대시보드로 돌아가기</RouterLink>
   </div>
 </template>
 
 <style scoped>
-.description-box {
-  background-color: #f8f9fa;
-  padding: 12px;
-  border-radius: 6px;
+.about-page {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.about-title {
+  margin: 0 0 8px;
+  color: var(--color-heading);
+}
+
+.tagline {
+  margin: 0 0 20px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+.feature-grid {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.feature-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+  text-align: center;
+}
+
+.feature-icon {
+  display: block;
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.feature-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.feature-desc {
+  margin: 0;
+  font-size: 12px;
   line-height: 1.5;
+  color: #6b7280;
+}
+
+.usage-section {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  background: #f4f9ff;
+  margin-bottom: 24px;
+}
+
+.usage-title {
+  margin: 0 0 10px;
   font-size: 14px;
+  font-weight: 700;
+  color: #2a5cd8;
 }
 
-ul {
-  padding-left: 20px;
-  margin: 8px 0 0 0;
+.usage-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: #374151;
 }
 
-li {
-  margin-bottom: 6px;
-  color: #555;
+.dev-info {
+  border-top: 1px solid #e5e7eb;
+  padding-top: 14px;
+  margin-bottom: 20px;
 }
 
-code {
-  background-color: #ffeaa7;
-  padding: 2px 4px;
-  border-radius: 4px;
-  color: #d63031;
+.dev-info-title {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9097a3;
+}
+
+.dev-info-stack {
+  margin: 0;
+  font-size: 12px;
+  color: #9097a3;
 }
 
 .home-btn {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
-  margin-top: 15px;
-  padding: 10px;
+  padding: 12px;
   background-color: #3498db;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 8px;
   font-weight: bold;
+  text-align: center;
+  text-decoration: none;
   cursor: pointer;
 }
 </style>
