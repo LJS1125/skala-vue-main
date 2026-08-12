@@ -20,7 +20,7 @@ npm run dev
 | 1. 배열 렌더링 | `weatherList`를 `v-for`로 반복 출력, `:key`에 `id` 바인딩 |
 | 2. 조건부 렌더링 | `v-if` / `v-else`로 25도 기준 `🔥 더움` / `❄️ 선선함` 라벨 분기 |
 | 3. 양방향 바인딩 | `v-model` 대신 `:value` + `@input`으로 검색 input 구현, 입력한 도시명 출력 |
-| 4. 이벤트 & 수식어 | 카드 클릭 시 상태바에 `{도시}이 선택되었습니다.` / 상세보기 버튼은 `@click.stop`으로 버블링 차단 후 `window.alert` |
+| 4. 이벤트 & 수식어 | 카드 클릭 시 상태바에 `{도시}이 선택되었습니다.` 표시 (같은 카드 다시 클릭하면 선택 해제) / 상세보기 버튼은 `@click.stop`으로 버블링 차단 후 `window.alert` |
 | 5. 본인 데이터 | 아래 참고 |
 
 ### 추가한 것
@@ -60,11 +60,71 @@ computed는 체인 구조로 연결: `weatherList` → `filteredWeatherList`(검
 
 - **최고/최저 기온 요약** (computed) — 현재 화면에 보이는 도시 중 가장 덥고 시원한 곳을 자동 표시. 목록 바뀌면 같이 갱신됨
 - **검색 기록** (반응형 상태 + watch) — 최근 검색어 5개를 뱃지로 저장. 타이핑 도중 값이 다 쌓이지 않도록 800ms 동안 입력 없으면 그때 기록 (디바운스). 뱃지 클릭하면 재검색, x로 개별 삭제
-- **검색 조건 요약** (watchEffect) — 검색어/즐겨찾기/정렬 상태 3개를 동시에 추적해서 "현재 조건: 검색어 '부' · 즐겨찾기만" 형태로 화면에 표시. watchEffect가 여러 값을 한번에 자동 추적하는 걸 콘솔 로그 말고 화면에서도 보여주고 싶어서 추가함
+- **검색 조건 요약** (watchEffect) — 검색어/즐겨찾기/정렬 상태 3개를 동시에 추적해서 "현재 조건: 검색어 "부산" · 즐겨찾기만 · 높은 순 정렬" 형태로 화면에 표시 watchEffect가 여러 값을 한번에 자동 추적하는 걸 콘솔 로그 말고 화면에서도 보여주고 싶어서 추가함
 
 ### 정리한 것
 
 - 과제 1에서 `is-cool`/`cold`가 섞여 있던 걸 `cool`로 통일 (`coolestCity`, `badge cool`)
+
+# Weather Dashboard — Component 분리 실습 (과제 3)
+
+Vue 3 Composition API로 만든 날씨 대시보드를, 기능 변경 없이 여러 개의 재사용 가능한 컴포넌트로 분리한 실습 과제입니다.
+
+## 프로젝트 구조
+
+```
+src/components/exercise/
+├── WeatherParent.vue      # 모든 반응형 데이터·로직 보유, 하위 컴포넌트 조립
+├── BaseDashboardCard.vue  # 공통 카드 디자인 틀 (slot 전용)
+├── SearchBar.vue          # 도시 검색 입력창
+├── SearchHistory.vue      # 검색 기록 뱃지 (추가 컴포넌트)
+├── TempSummary.vue        # 최고/최저 기온 요약 (추가 컴포넌트)
+├── FilterToolbar.vue      # 정렬·즐겨찾기 필터 버튼 (추가 컴포넌트)
+└── WeatherCard.vue        # 도시별 날씨 카드
+```
+
+## 기능
+
+- **도시 검색**: 실시간 입력으로 도시 목록 필터링
+- **검색 기록**: 800ms 디바운스로 최근 검색어 최대 5개 저장, 뱃지 클릭 시 재검색·삭제 가능
+- **정렬**: 기온 높은 순 / 낮은 순 토글
+- **즐겨찾기**: 카드별 즐겨찾기 지정 및 즐겨찾기만 보기 필터
+- **최고/최저 기온 요약**: 현재 표시된 도시 목록 기준으로 자동 계산
+- **상세보기**: 카드 클릭 시 선택 상태 표시, 별도 버튼으로 상세 정보 확인
+- **빈 결과 안내**: 검색 결과가 없을 때 안내 문구 표시
+
+## 컴포넌트 설계
+
+### Props / Emits 요약
+
+| 컴포넌트 | Props | Emits |
+|---|---|---|
+| SearchBar | `searchQuery` | `update-query` |
+| SearchHistory | `history` | `apply-history`, `remove-history` |
+| FilterToolbar | `sortOrder`, `showFavoritesOnly` | `toggle-sort-desc`, `toggle-sort-asc`, `toggle-favorites` |
+| TempSummary | `hottestCity`, `coolestCity` | 없음 (표시 전용) |
+| WeatherCard | `city`, `isSelected` | `select-card`, `click-detail`, `toggle-favorite` |
+
+### 설계 원칙
+
+- **상태는 최상위(WeatherParent)에 집중**: 모든 반응형 데이터와 computed·watch 로직은 `WeatherParent.vue`에서만 관리하고, 하위 컴포넌트는 props로 받은 값을 표시하거나 emit으로 이벤트만 올려보냄
+- **BaseDashboardCard는 순수 레이아웃 컴포넌트**: 로직 없이 `<slot>`만 사용해 검색 영역과 날씨 목록 영역의 디자인을 공통화
+- **슬롯 자식과 부모의 직접 바인딩**: `SearchBar`, `SearchHistory`, `WeatherCard`는 시각적으로는 `BaseDashboardCard` 안에 위치하지만, 실제 데이터 바인딩은 `WeatherParent`와 직접 이루어짐 (Vue의 슬롯 컴파일 스코프 특성 활용)
+- **이벤트 이름은 kebab-case로 통일** (`update-query`, `select-card` 등)
+
+## 사용 기술
+
+- Vue 3 (Composition API, `<script setup>`)
+- `ref`, `computed`, `watch`, `watchEffect`
+- Props / Emits (양방향 데이터 흐름)
+- Slot (컴포넌트 합성)
+
+## 실행 방법
+
+```bash
+npm install
+npm run dev
+```
 
 ## 폴더 구조
 
