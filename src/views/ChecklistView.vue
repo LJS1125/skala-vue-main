@@ -1,18 +1,27 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useWeatherStore } from '@/stores/weatherStore'
+import { useAirQualityStore } from '@/stores/airQualityStore'
 import { getLifestyleIndices } from '@/utils/lifestyleIndex'
+import { getWeatherLabel } from '@/utils/weatherLabel'
 
 const route = useRoute()
 const weatherStore = useWeatherStore()
+const airQualityStore = useAirQualityStore()
+
+onMounted(() => {
+  airQualityStore.fetchAllAirQuality()
+})
 
 const city = computed(
   () => weatherStore.weatherList.find((c) => c.id === route.params.cityId) || null,
 )
 
+const airGrade = computed(() => airQualityStore.getGradeByCityId(route.params.cityId))
+
 // 옷차림/우산 여부는 생활 지수 요약이 대표하므로, 체크리스트는 그 외 보조 준비물만 다룬다
-const lifestyle = computed(() => getLifestyleIndices(city.value))
+const lifestyle = computed(() => getLifestyleIndices(city.value, airGrade.value))
 
 const checklistItems = computed(() => {
   if (!city.value) return []
@@ -197,12 +206,13 @@ const checklistItems = computed(() => {
 
     <div v-else-if="city" class="checklist-card">
       <h2 class="checklist-title">🎒 {{ city.name }}, 오늘 이건 챙기세요</h2>
-      <p class="checklist-condition">현재 {{ city.temp }}°C · {{ city.status }}</p>
+      <p class="checklist-condition">현재 {{ city.temp }}°C · {{ getWeatherLabel(city.icon) }}</p>
 
       <p v-if="lifestyle" class="lifestyle-row">
         {{ lifestyle.clothing.icon }} {{ lifestyle.clothing.label }} ·
         {{ lifestyle.umbrella.icon }} {{ lifestyle.umbrella.label }} ·
         {{ lifestyle.discomfort.icon }} {{ lifestyle.discomfort.label }}
+        <template v-if="lifestyle.mask"> · {{ lifestyle.mask.icon }} {{ lifestyle.mask.label }}</template>
       </p>
 
       <p class="section-label">그 외 챙기면 좋은 준비물</p>
@@ -242,7 +252,7 @@ const checklistItems = computed(() => {
 .back-link {
   display: inline-block;
   margin-bottom: 16px;
-  color: #4c8bf5;
+  color: var(--color-heading);
   font-weight: 600;
   font-size: 13px;
   text-decoration: none;

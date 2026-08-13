@@ -30,6 +30,9 @@ export const useWeatherStore = defineStore('weather', () => {
   const myLocationWeather = ref(null)
   const myLocationStatus = ref('idle') // idle | loading | ready | error
 
+  // 자유 검색으로 찾은 도시(고정 목록 밖) 날씨. 상세보기 화면에서 재조회 없이 재사용한다.
+  const searchResultWeather = ref(null)
+
   function fetchAllWeather() {
     if (weatherList.value.every((c) => c.temp !== null)) return Promise.resolve()
     if (fetchPromise) return fetchPromise
@@ -42,6 +45,7 @@ export const useWeatherStore = defineStore('weather', () => {
           const target = weatherList.value[idx]
           target.temp = Math.round(res.data.main.temp)
           target.status = res.data.weather[0].description
+          target.icon = res.data.weather[0].icon
           target.humidity = res.data.main.humidity
           target.wind = res.data.wind.speed
         })
@@ -71,8 +75,11 @@ export const useWeatherStore = defineStore('weather', () => {
           name: '내 위치',
           temp: Math.round(res.data.main.temp),
           status: res.data.weather[0].description,
+          icon: res.data.weather[0].icon,
           humidity: res.data.main.humidity,
           wind: res.data.wind.speed,
+          lat,
+          lon,
         }
         myLocationStatus.value = 'ready'
       })
@@ -91,5 +98,6 @@ export const useWeatherStore = defineStore('weather', () => {
     myLocationWeather,
     myLocationStatus,
     fetchMyLocationWeather,
+    searchResultWeather,
   }
 })

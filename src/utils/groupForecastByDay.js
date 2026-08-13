@@ -37,3 +37,31 @@ function formatDateLabel(dateStr) {
   const d = new Date(dateStr)
   return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' })
 }
+
+// 원본 3시간 간격 목록에서 '오늘' 날짜의 슬롯만 뽑아 시간대별 위젯(아이콘/온도/강수확률)에 사용한다.
+// OpenWeatherMap 예보는 항상 다음 슬롯부터 시작하므로 지난 시간대는 자연히 포함되지 않는다.
+export function getTodayHourlySlots(list) {
+  const todayKey = formatDateKey(new Date())
+
+  return list
+    .filter((entry) => entry.dt_txt.startsWith(todayKey))
+    .map((entry) => {
+      const [, time] = entry.dt_txt.split(' ')
+      const hour = Number(time.split(':')[0])
+      return {
+        hour,
+        label: `${hour}시`,
+        temp: Math.round(entry.main.temp),
+        icon: entry.weather[0].icon,
+        description: entry.weather[0].description,
+        pop: Math.round((entry.pop ?? 0) * 100),
+      }
+    })
+}
+
+function formatDateKey(date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}

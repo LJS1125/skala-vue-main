@@ -2,23 +2,26 @@
 import { onMounted } from 'vue'
 import UnitToggler from '@/components/exercise/UnitToggler.vue'
 import { useWeatherStore } from '@/stores/weatherStore'
+import { useLocationStore } from '@/stores/locationStore'
 
 const weatherStore = useWeatherStore()
+const locationStore = useLocationStore()
 
 onMounted(() => {
   weatherStore.fetchAllWeather()
+  locationStore.detectLocation()
 })
 </script>
 
 <template>
   <div class="dashboard-wrapper">
-    <h1 class="app-title">과제 6. Axios 활용</h1>
+    <h1 class="app-title">날씨 웹페이지
+    </h1>
     <div class="topbar">
       <nav class="navigation-bar">
         <RouterLink to="/" class="nav-item">🌦️ 날씨 대시보드</RouterLink>
-        <span class="divider">|</span>
         <RouterLink to="/map" class="nav-item">🗺️ 날씨 지도</RouterLink>
-        <span class="divider">|</span>
+        <RouterLink to="/air" class="nav-item">🌫️ 대기질</RouterLink>
         <RouterLink to="/about" class="nav-item">ℹ️ 서비스 소개</RouterLink>
       </nav>
       <div class="toggler-group">
@@ -47,6 +50,7 @@ body {
   max-width: none;
   margin: 0;
   padding: 0;
+  background-color: #F9F9F9
 }
 
 .app-title {
@@ -81,12 +85,6 @@ body {
   margin: 0 auto 20px;
 }
 
-.topbar .navigation-bar {
-  margin-bottom: 0;
-  flex-wrap: wrap;
-  row-gap: 8px;
-}
-
 .toggler-group {
   display: flex;
   align-items: center;
@@ -94,17 +92,41 @@ body {
   flex-wrap: wrap;
 }
 
-/* nav바(.navigation-bar)와 nav-item 텍스트는 exercise.css에서 흰 배경으로 하드코딩돼 있어
-   다크모드에서도 CSS 변수를 따르도록 여기서 재정의 */
+/* 알약형(pill) 세그먼트 네비게이션. exercise.css의 흰 배경/밑줄 스타일을 완전히 덮어쓴다 */
 .navigation-bar {
-  background-color: var(--color-background-soft);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 0;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(6px);
+  box-shadow: none;
 }
 
 .nav-item {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text);
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .nav-item:hover {
   color: var(--color-heading);
+}
+
+.nav-item.router-link-exact-active {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  border-bottom: none;
+  padding-bottom: 8px;
+  box-shadow: none;
 }
 </style>

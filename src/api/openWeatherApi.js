@@ -26,3 +26,9 @@ export function fetchForecastByCoord(lat, lon) {
     params: { lat, lon, appid: API_KEY, units: 'metric', lang: 'kr' },
   })
 }
+
+export function fetchAirPollution(lat, lon) {
+  return client.get('/air_pollution', {
+    params: { lat, lon, appid: API_KEY },
+  })
+}

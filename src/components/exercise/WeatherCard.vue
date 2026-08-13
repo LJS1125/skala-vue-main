@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
 import { useConfigStore } from '@/stores/configStore'
-import { getLifestyleIndices } from '@/utils/lifestyleIndex'
+import { getWeatherLabel } from '@/utils/weatherLabel'
+import { getTempAccentColor, getTempAccentLabel } from '@/utils/tempColor'
 
 const props = defineProps({
   city: {
@@ -12,8 +13,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  // 내 위치 카드 / 자유 검색 카드처럼 즐겨찾기·선택·상세보기 대상이 아닌 경우 false로 전달
+  // 내 위치 카드 / 자유 검색 카드처럼 목록 선택 동작이 필요 없는 경우 false로 전달
   interactive: {
+    type: Boolean,
+    default: true,
+  },
+  showFavorite: {
+    type: Boolean,
+    default: undefined,
+  },
+  showDetail: {
     type: Boolean,
     default: true,
   },
@@ -30,194 +39,171 @@ const toDisplayTemp = (rawTemp) => {
   return rawTemp
 }
 
-const lifestyle = computed(() => getLifestyleIndices(props.city))
+const resolvedShowFavorite = computed(() =>
+  props.showFavorite === undefined ? props.interactive : props.showFavorite,
+)
+
+const accentColor = computed(() => getTempAccentColor(props.city.temp))
+const weatherLabel = computed(() => getWeatherLabel(props.city.icon))
+const tempAccentLabel = computed(() => getTempAccentLabel(props.city.temp))
+const iconUrl = computed(() =>
+  props.city.icon ? `https://openweathermap.org/img/wn/${props.city.icon}@2x.png` : '',
+)
 </script>
 
 <template>
-  <div
-    class="weather-row"
-    :class="{
-      'is-selected': isSelected,
-      'is-hot': city.temp >= 25,
-      'is-cool': city.temp < 25,
-      'is-static': !interactive,
-    }"
-    :tabindex="interactive ? 0 : -1"
-    @click="interactive && emit('select-card', city)"
-    @keyup.enter="interactive && emit('select-card', city)"
+  <el-card
+    class="weather-card"
+    :class="{ 'is-selected': isSelected, 'is-static': !interactive }"
+    :style="{ borderLeftColor: accentColor }"
+    shadow="hover"
   >
-    <button
-      v-if="interactive"
-      type="button"
-      class="favorite-btn"
-      @click.stop="emit('toggle-favorite', city)"
+    <div
+      class="weather-row"
+      :tabindex="interactive ? 0 : -1"
+      @click="interactive && emit('select-card', city)"
+      @keyup.enter="interactive && emit('select-card', city)"
     >
-      {{ city.isFavorite ? '⭐' : '☆' }}
-    </button>
+      <div class="weather-row__info">
+        <div class="city-name-row">
+          <p class="city-name">{{ city.name }}</p>
+          <el-button
+            v-if="resolvedShowFavorite"
+            class="favorite-btn"
+            circle
+            text
+            @click.stop="emit('toggle-favorite', city)"
+          >
+            {{ city.isFavorite ? '⭐' : '☆' }}
+          </el-button>
+        </div>
 
-    <div class="weather-row__info">
-      <p class="city-name">{{ city.name }} ({{ city.status }})</p>
-      <p class="temp">현재 기온: {{ toDisplayTemp(city.temp) }}{{ configStore.unitSymbol }}</p>
+        <div class="icon-temp-row">
+          <img v-if="iconUrl" :src="iconUrl" class="status-icon" :alt="city.status" />
+          <p class="temp-big">{{ toDisplayTemp(city.temp) }}{{ configStore.unitSymbol }}</p>
+        </div>
 
-      <span v-if="city.temp >= 25" class="badge hot">🔥 더움 (25도 이상)</span>
-      <span v-else class="badge cool">❄️ 선선함 (25도 미만)</span>
+        <p class="status-line" :style="{ color: accentColor }">
+          {{ weatherLabel }} · {{ tempAccentLabel }}
+        </p>
+      </div>
 
-      <p class="meta">💧 습도 {{ city.humidity }}% · 🌬️ 바람 {{ city.wind }}m/s</p>
-
-      <p v-if="lifestyle" class="lifestyle-row">
-        {{ lifestyle.clothing.icon }} {{ lifestyle.clothing.label }} ·
-        {{ lifestyle.umbrella.icon }} {{ lifestyle.umbrella.label }} ·
-        {{ lifestyle.discomfort.icon }} {{ lifestyle.discomfort.label }}
-      </p>
+      <el-button v-if="showDetail" class="detail-btn" @click.stop="emit('click-detail', city)">
+        상세보기
+      </el-button>
     </div>
 
-    <button v-if="interactive" class="detail-btn" @click.stop="emit('click-detail', city)">
-      상세보기
-    </button>
-  </div>
+    <div v-if="$slots.extra" class="weather-row__extra">
+      <slot name="extra" />
+    </div>
+  </el-card>
 </template>
 
 <style scoped>
-.weather-row {
+.weather-card {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 16px;
   margin-bottom: 12px;
-  border: 2px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-card, 16px);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-border);
   background: var(--color-background-soft);
-  cursor: pointer;
-  outline: none;
-  transition:
-    border-color 0.15s ease,
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
-.weather-row:last-child {
+.weather-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.weather-card:last-child {
   margin-bottom: 0;
 }
 
-.weather-row:hover,
-.weather-row:focus-visible {
+.weather-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 139, 245, 0.14);
 }
 
-.weather-row.is-hot {
-  background: linear-gradient(135deg, #fff6f4 0%, #ffe6e1 100%);
+.weather-card.is-selected {
+  border-color: var(--color-heading);
+  box-shadow: 0 0 0 2px var(--color-heading);
 }
 
-.weather-row.is-cool {
-  background: linear-gradient(135deg, #f4f9ff 0%, #e7f1ff 100%);
+.weather-card.is-static:hover {
+  transform: none;
 }
 
-.weather-row.is-selected {
-  border-color: transparent;
-}
-
-.weather-row.is-selected.is-hot {
-  border-color: #ff6b5b;
-  box-shadow: 0 0 0 3px rgba(255, 107, 91, 0.35);
-}
-
-.weather-row.is-selected.is-cool {
-  border-color: #4c8bf5;
-  box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.35);
-}
-
-.weather-row.is-static {
+.weather-card.is-static .weather-row {
   cursor: default;
 }
 
-.weather-row.is-static:hover,
-.weather-row.is-static:focus-visible {
-  transform: none;
-  box-shadow: none;
-}
-
-.favorite-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: none;
-  background: transparent;
-  padding: 4px;
-  font-size: 18px;
-  line-height: 1;
+.weather-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
   cursor: pointer;
-  color: #f5a623;
+  outline: none;
 }
 
 .weather-row__info {
+  flex: 1;
+  min-width: 0;
   text-align: left;
 }
 
+.city-name-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
 .city-name {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-heading);
 }
 
-.temp {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: var(--color-text);
+.favorite-btn {
+  font-size: 16px;
+  padding: 2px;
+  height: auto;
 }
 
-.badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+.icon-temp-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
 }
 
-.badge.hot {
-  background: #ffe3e0;
-  color: #d1483a;
+.status-icon {
+  width: 28px;
+  height: 28px;
+  margin-left: -4px;
 }
 
-.badge.cool {
-  background: #e0f0ff;
-  color: #2a6fc9;
+.temp-big {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-heading);
 }
 
-.meta {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--color-text);
-}
-
-.lifestyle-row {
-  margin: 8px 0 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-accent-text, #2a5cd8);
+.status-line {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .detail-btn {
   flex-shrink: 0;
-  border: 1px solid var(--color-border);
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
 }
 
-.detail-btn:hover {
-  background: #4c8bf5;
-  border-color: #4c8bf5;
-  color: #fff;
+.weather-row__extra {
+  padding: 14px 18px 18px;
+  border-top: 1px solid var(--color-border);
 }
 </style>

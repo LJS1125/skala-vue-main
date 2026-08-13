@@ -10,4 +10,8 @@ export const CITY_SEED = [
   { id: 'city_09', name: '제주', nameEn: 'Jeju' },
   // 울릉도는 OpenWeatherMap의 q=Ulleungdo,KR 지명 검색이 불안정해 좌표 기반 조회로 대체
   { id: 'city_10', name: '울릉도', nameEn: 'Ulleungdo', coord: { lat: 37.48, lon: 130.9 } },
+  { id: 'city_11', name: '수원', nameEn: 'Suwon' },
+  // 백령도는 q=Baengnyeongdo,KR이 404(city not found)를 반환해 좌표 기반 조회로 대체
+  { id: 'city_12', name: '백령도', nameEn: 'Baengnyeongdo', coord: { lat: 37.97, lon: 124.63 } },
+  { id: 'city_13', name: '강릉', nameEn: 'Gangneung' },
 ]

@@ -41,10 +41,12 @@ const usageTips = [
     </p>
 
     <ul class="feature-grid">
-      <li v-for="feature in features" :key="feature.title" class="feature-card">
-        <span class="feature-icon">{{ feature.icon }}</span>
-        <p class="feature-title">{{ feature.title }}</p>
-        <p class="feature-desc">{{ feature.desc }}</p>
+      <li v-for="feature in features" :key="feature.title">
+        <el-card class="feature-card" shadow="hover">
+          <span class="feature-icon">{{ feature.icon }}</span>
+          <p class="feature-title">{{ feature.title }}</p>
+          <p class="feature-desc">{{ feature.desc }}</p>
+        </el-card>
       </li>
     </ul>
 
@@ -73,6 +75,8 @@ const usageTips = [
   max-width: 560px;
   margin: 0 auto;
   padding: 24px 20px 48px;
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
 .about-title {
@@ -98,10 +102,18 @@ const usageTips = [
 
 .feature-card {
   border: 1px solid var(--color-border);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--radius-card, 16px);
   background: var(--color-background-soft);
   text-align: center;
+  transition: transform 0.15s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-2px);
+}
+
+.feature-card :deep(.el-card__body) {
+  padding: 16px;
 }
 
 .feature-icon {
@@ -126,7 +138,7 @@ const usageTips = [
 
 .usage-section {
   border: 1px solid var(--color-border);
-  border-radius: 12px;
+  border-radius: var(--radius-card, 16px);
   padding: 16px 18px;
   background: var(--color-background-soft);
   margin-bottom: 24px;
@@ -136,7 +148,7 @@ const usageTips = [
   margin: 0 0 10px;
   font-size: 14px;
   font-weight: 700;
-  color: #2a5cd8;
+  color: var(--color-accent-text);
 }
 
 .usage-list {
@@ -150,10 +162,10 @@ const usageTips = [
 .visit-stat {
   margin: 0 0 20px;
   padding: 10px 14px;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-border);
   border-radius: 10px;
-  color: #2a5cd8;
+  color: var(--color-accent-text);
   font-size: 13px;
   font-weight: 600;
   text-align: center;
@@ -183,7 +195,7 @@ const usageTips = [
   box-sizing: border-box;
   width: 100%;
   padding: 12px;
-  background-color: #3498db;
+  background-color: var(--color-accent-text);
   color: white;
   border: none;
   border-radius: 8px;
@@ -191,5 +203,10 @@ const usageTips = [
   text-align: center;
   text-decoration: none;
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.home-btn:hover {
+  background-color: var(--el-color-primary-dark-2, #26649b);
 }
 </style>

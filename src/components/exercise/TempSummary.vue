@@ -28,23 +28,23 @@ const toDisplayTemp = (rawTemp) => {
       🌡️ {{ hottestCity.name }} {{ toDisplayTemp(hottestCity.temp) }}{{ configStore.unitSymbol }}
     </template>
     <template v-else>
-      🔥 가장 더운 곳: {{ hottestCity.name }} {{ toDisplayTemp(hottestCity.temp)
-      }}{{ configStore.unitSymbol }} · ❄️ 가장 시원한 곳: {{ coolestCity.name }}
-      {{ toDisplayTemp(coolestCity.temp) }}{{ configStore.unitSymbol }}
+      🔥 가장 더운 곳 <strong>{{ hottestCity.name }} {{ toDisplayTemp(hottestCity.temp)
+      }}{{ configStore.unitSymbol }}</strong> · ❄️ 가장 시원한 곳
+      <strong>{{ coolestCity.name }} {{ toDisplayTemp(coolestCity.temp) }}{{ configStore.unitSymbol }}</strong>
     </template>
   </p>
 </template>
 
 <style scoped>
 .temp-summary {
-  margin: 0 0 14px;
-  padding: 10px 14px;
-  background: var(--color-background-soft);
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  color: var(--color-text);
-  font-size: 13px;
+  margin: 0;
+  font-size: 12.5px;
   font-weight: 600;
-  text-align: center;
+  color: var(--color-text);
+}
+
+.temp-summary strong {
+  font-weight: 800;
+  color: var(--color-heading);
 }
 </style>

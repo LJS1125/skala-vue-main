@@ -1,12 +1,22 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useConfigStore } from '@/stores/configStore'
 import { useWeatherStore } from '@/stores/weatherStore'
+import { CITY_COORDS } from '@/data/cityCoords.js'
+import { loadKakaoMaps } from '@/utils/loadKakaoMaps.js'
 
 const router = useRouter()
 const configStore = useConfigStore()
 const weatherStore = useWeatherStore()
+
+const mapContainer = ref(null)
+const mapError = ref('')
+
+let mapInstance = null
+let kakaoRef = null
+let overlays = []
+let stopWatchTemps = null
 
 const toDisplayTemp = (rawTemp) => {
   if (configStore.unit === 'fahrenheit') {
@@ -15,92 +25,107 @@ const toDisplayTemp = (rawTemp) => {
   return rawTemp
 }
 
-const CITY_POSITIONS = [
-  { cityId: 'city_01', x: 140, y: 90 }, // 서울 - 위쪽 중앙
-  { cityId: 'city_04', x: 112, y: 96 }, // 인천 - 서울 서쪽
-  { cityId: 'city_08', x: 148, y: 172 }, // 세종 - 중부
-  { cityId: 'city_06', x: 158, y: 194 }, // 대전 - 중부
-  { cityId: 'city_05', x: 118, y: 252 }, // 광주 - 남서쪽
-  { cityId: 'city_03', x: 190, y: 228 }, // 대구 - 남동쪽
-  { cityId: 'city_07', x: 206, y: 256 }, // 울산 - 동해안 남부
-  { cityId: 'city_02', x: 200, y: 290 }, // 부산 - 오른쪽 아래
-  { cityId: 'city_09', x: 110, y: 380 }, // 제주 - 맨 아래 별도 섬
-  { cityId: 'city_10', x: 250, y: 140 }, // 울릉도 - 동쪽 먼바다 별도 섬
-]
-
-const mapMarkers = computed(() =>
-  CITY_POSITIONS.map((pos) => {
-    const city = weatherStore.weatherList.find((c) => c.id === pos.cityId)
-    return { ...pos, city }
-  }).filter((marker) => marker.city),
-)
-
 const goToDetail = (city) => {
   router.push(`/weather/${city.id}`)
 }
+
+function clearOverlays() {
+  overlays.forEach((overlay) => overlay.setMap(null))
+  overlays = []
+}
+
+function renderMarkers() {
+  if (!mapInstance || !kakaoRef) return
+  clearOverlays()
+
+  weatherStore.weatherList.forEach((city) => {
+    const coord = CITY_COORDS[city.id]
+    if (!coord || city.temp === null || city.temp === undefined) return
+
+    const position = new kakaoRef.maps.LatLng(coord.lat, coord.lon)
+    const iconUrl = city.icon ? `https://openweathermap.org/img/wn/${city.icon}.png` : ''
+
+    const el = document.createElement('div')
+    el.className = 'kakao-city-marker'
+    el.innerHTML = `
+      <span class="kakao-marker-label">
+        ${iconUrl ? `<img class="kakao-marker-icon" src="${iconUrl}" alt="${city.status}" />` : ''}
+        <span>${city.name} ${toDisplayTemp(city.temp)}${configStore.unitSymbol}</span>
+      </span>
+    `
+    el.addEventListener('click', () => goToDetail(city))
+
+    const overlay = new kakaoRef.maps.CustomOverlay({
+      position,
+      content: el,
+      clickable: true,
+    })
+    overlay.setMap(mapInstance)
+    overlays.push(overlay)
+  })
+}
+
+onMounted(async () => {
+  try {
+    const kakao = await loadKakaoMaps()
+    kakaoRef = kakao
+
+    // 초기 중심은 대략적인 국토 중앙, 이후 아래 bounds로 13개 지역이 모두 보이도록 재조정한다
+    mapInstance = new kakao.maps.Map(mapContainer.value, {
+      center: new kakao.maps.LatLng(36.4, 127.8),
+      level: 13,
+    })
+
+    const bounds = new kakao.maps.LatLngBounds()
+    Object.values(CITY_COORDS).forEach(({ lat, lon }) => {
+      bounds.extend(new kakao.maps.LatLng(lat, lon))
+    })
+    mapInstance.setBounds(bounds, 40)
+
+    renderMarkers()
+
+    // 날씨 데이터가 비동기로 채워지면(초기 temp:null → 실제 값) 마커를 다시 그린다
+    stopWatchTemps = watch(
+      () => weatherStore.weatherList.map((c) => c.temp).join(','),
+      renderMarkers,
+    )
+  } catch (err) {
+    console.error(err)
+    mapError.value = '카카오맵을 불러오지 못했습니다.'
+  }
+})
+
+onBeforeUnmount(() => {
+  if (stopWatchTemps) stopWatchTemps()
+  clearOverlays()
+  mapInstance = null
+  kakaoRef = null
+})
 </script>
 
 <template>
   <div class="map-page">
     <h2 class="page-title">🗺️ 날씨 지도</h2>
 
-    <div class="map-card">
-      <p v-if="weatherStore.isLoading" class="empty-msg">⏳ 날씨 정보를 불러오는 중입니다...</p>
-      <p v-else-if="weatherStore.error" class="empty-msg">{{ weatherStore.error }}</p>
+    <el-card class="map-card" shadow="always">
+      <p v-if="mapError" class="empty-msg">{{ mapError }}</p>
+      <div v-else ref="mapContainer" class="kakao-map"></div>
 
-      <template v-else>
-        <svg class="korea-map" viewBox="0 0 300 420" role="img" aria-label="전국 도시별 날씨 지도">
-          <path
-            class="peninsula"
-            d="M 130 40 L 168 34 L 195 68 L 188 108 L 210 148 L 203 198
-               L 228 228 L 218 268 L 188 298 L 168 320 L 140 330
-               L 118 300 L 98 258 L 90 200 L 96 150 L 80 110 L 90 68 Z"
-          />
-          <ellipse class="jeju-island" cx="110" cy="380" rx="38" ry="16" />
-          <ellipse class="ulleungdo-island" cx="250" cy="140" rx="13" ry="10" />
-
-          <g
-            v-for="marker in mapMarkers"
-            :key="marker.cityId"
-            class="city-marker"
-            :class="{ 'is-hot': marker.city.temp >= 25, 'is-cool': marker.city.temp < 25 }"
-            tabindex="0"
-            role="button"
-            :aria-label="`${marker.city.name} 상세보기`"
-            @click="goToDetail(marker.city)"
-            @keyup.enter="goToDetail(marker.city)"
-          >
-            <circle :cx="marker.x" :cy="marker.y" r="9" class="marker-dot" />
-            <text :x="marker.x + 14" :y="marker.y - 3" class="marker-name">
-              {{ marker.city.name }}
-            </text>
-            <text :x="marker.x + 14" :y="marker.y + 12" class="marker-temp">
-              {{ toDisplayTemp(marker.city.temp) }}{{ configStore.unitSymbol }}
-            </text>
-          </g>
-        </svg>
-
-        <div class="legend">
-          <span class="legend-item">
-            <span class="legend-dot is-hot"></span>
-            25도 이상
-          </span>
-          <span class="legend-item">
-            <span class="legend-dot is-cool"></span>
-            25도 미만
-          </span>
-        </div>
-      </template>
-    </div>
+      <p v-if="weatherStore.isLoading" class="empty-msg map-note">
+        ⏳ 날씨 정보를 불러오는 중입니다...
+      </p>
+      <p v-else-if="weatherStore.error" class="empty-msg map-note">{{ weatherStore.error }}</p>
+    </el-card>
   </div>
 </template>
 
 <style scoped>
 .map-page {
-  max-width: 480px;
+  max-width: 720px;
   margin: 0 auto;
   padding: 24px 20px 48px;
   font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  background: var(--color-background);
 }
 
 .page-title {
@@ -111,11 +136,13 @@ const goToDetail = (city) => {
 }
 
 .map-card {
-  border: 1px solid var(--color-border);
   border-radius: 16px;
-  padding: 24px;
+  border: 1px solid var(--color-border);
   background: var(--color-background-soft);
-  box-shadow: 0 2px 10px rgba(76, 139, 245, 0.08);
+}
+
+.map-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
 .empty-msg {
@@ -126,93 +153,53 @@ const goToDetail = (city) => {
   text-align: center;
 }
 
-.korea-map {
+.map-note {
+  padding: 10px 0 0;
+}
+
+.kakao-map {
   width: 100%;
-  height: auto;
-  display: block;
+  height: 520px;
+  border-radius: 12px;
+  overflow: hidden;
 }
+</style>
 
-.peninsula {
-  fill: var(--color-background-mute);
-  stroke: var(--color-border);
-  stroke-width: 2;
-}
-
-.jeju-island,
-.ulleungdo-island {
-  fill: var(--color-background-mute);
-  stroke: var(--color-border);
-  stroke-width: 2;
-}
-
-.city-marker {
-  cursor: pointer;
-  outline: none;
-}
-
-.marker-dot {
-  transition: r 0.15s ease;
-}
-
-.city-marker.is-hot .marker-dot {
-  fill: #ff6b5b;
-}
-
-.city-marker.is-cool .marker-dot {
-  fill: #4c8bf5;
-}
-
-.city-marker:hover .marker-dot,
-.city-marker:focus-visible .marker-dot {
-  r: 11;
-}
-
-.marker-name {
-  font-size: 13px;
-  font-weight: 700;
-  fill: var(--color-heading);
-}
-
-.marker-temp {
-  font-size: 11px;
-  fill: var(--color-text);
-}
-
-.city-marker.is-hot .marker-name {
-  fill: #d1483a;
-}
-
-.city-marker.is-cool .marker-name {
-  fill: #2a6fc9;
-}
-
-.legend {
+<style>
+/* 카카오맵 CustomOverlay는 Vue 스코프 밖에서 DOM으로 직접 생성되므로 전역 스타일로 정의한다 */
+.kakao-city-marker {
   display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 16px;
-  font-size: 13px;
-  color: var(--color-text);
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transform-origin: center bottom;
+  transition: transform 0.15s ease;
 }
 
-.legend-item {
+.kakao-city-marker:hover {
+  transform: scale(1.15);
+}
+
+/* 카카오맵 CustomOverlay는 raw DOM이라 실제 el-card를 마운트할 수 없어, 팔레트 색상을
+   직접 지정해 카드형 팝업과 같은 톤으로만 맞춘다 */
+.kakao-marker-label {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  padding: 3px 10px 3px 4px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  color: #1a1a1a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
 }
 
-.legend-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.legend-dot.is-hot {
-  background: #ff6b5b;
-}
-
-.legend-dot.is-cool {
-  background: #4c8bf5;
+.kakao-marker-icon {
+  width: 22px;
+  height: 22px;
 }
 </style>

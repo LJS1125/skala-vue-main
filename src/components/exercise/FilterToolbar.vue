@@ -1,5 +1,5 @@
 <script setup>
-defineProps({
+const props = defineProps({
   sortOrder: {
     type: String,
     default: null,
@@ -10,35 +10,30 @@ defineProps({
   },
 })
 
-defineEmits(['toggle-sort-desc', 'toggle-sort-asc', 'toggle-favorites'])
+const emit = defineEmits(['update:sortOrder', 'toggle-favorites'])
+
+const handleSortChange = (value) => {
+  emit('update:sortOrder', value === 'none' ? null : value)
+}
 </script>
 
 <template>
   <div class="toolbar">
-    <button
-      type="button"
-      class="sort-btn"
-      :class="{ 'is-active': sortOrder === 'desc' }"
-      @click="$emit('toggle-sort-desc')"
-    >
-      ▲ 높은 순
-    </button>
-    <button
-      type="button"
-      class="sort-btn"
-      :class="{ 'is-active': sortOrder === 'asc' }"
-      @click="$emit('toggle-sort-asc')"
-    >
-      ▼ 낮은 순
-    </button>
-    <button
-      type="button"
-      class="favorite-filter-btn"
-      :class="{ 'is-active': showFavoritesOnly }"
+    <el-radio-group :model-value="props.sortOrder ?? 'none'" @change="handleSortChange">
+      <el-radio-button value="none">전체</el-radio-button>
+      <el-radio-button value="desc">▲ 높은 순</el-radio-button>
+      <el-radio-button value="asc">▼ 낮은 순</el-radio-button>
+      <el-radio-button value="favorite">⭐ 즐겨찾기 우선</el-radio-button>
+    </el-radio-group>
+
+    <el-button
+      :type="showFavoritesOnly ? 'warning' : 'default'"
+      :plain="!showFavoritesOnly"
+      round
       @click="$emit('toggle-favorites')"
     >
       ⭐ 즐겨찾기만 보기
-    </button>
+    </el-button>
   </div>
 </template>
 
@@ -46,30 +41,8 @@ defineEmits(['toggle-sort-desc', 'toggle-sort-asc', 'toggle-favorites'])
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 14px;
-}
-
-.sort-btn,
-.favorite-filter-btn {
-  border: 1px solid var(--color-border);
-  background: var(--color-background-soft);
-  color: var(--color-text);
-  padding: 7px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
-}
-
-.sort-btn.is-active,
-.favorite-filter-btn.is-active {
-  background: #4c8bf5;
-  border-color: #4c8bf5;
-  color: #fff;
 }
 </style>
