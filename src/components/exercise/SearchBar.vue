@@ -34,12 +34,17 @@ defineEmits(['update-query'])
 .search-input {
   width: 100%;
   padding: 11px 14px;
-  border: 1px solid #d0d7de;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-  transition: border-color 0.2s ease;
+  background: var(--color-background);
+  color: var(--color-heading);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .search-input:focus {
@@ -50,6 +55,6 @@ defineEmits(['update-query'])
 .search-echo {
   margin: 10px 0 0;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text);
 }
 </style>

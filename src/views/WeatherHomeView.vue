@@ -2,6 +2,7 @@
 import { ref, computed, watch, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { weatherList } from '../data/weatherData.js'
+import { useVisitStore } from '@/stores/visitStore'
 import BaseDashboardCard from '../components/exercise/BaseDashboardCard.vue'
 import SearchBar from '../components/exercise/SearchBar.vue'
 import SearchHistory from '../components/exercise/SearchHistory.vue'
@@ -10,6 +11,20 @@ import TempSummary from '../components/exercise/TempSummary.vue'
 import FilterToolbar from '../components/exercise/FilterToolbar.vue'
 
 const router = useRouter()
+const visitStore = useVisitStore()
+
+const mostViewedCityName = computed(() => {
+  const cityId = visitStore.mostViewedCity
+  if (!cityId) return null
+  const city = weatherList.find((c) => c.id === cityId)
+  return city ? city.name : null
+})
+
+// 조사 대상이 항상 "날씨"(받침 없음)로 끝나므로 조사는 항상 '를'
+const mostViewedText = computed(() => {
+  if (!mostViewedCityName.value) return ''
+  return `안녕하세요 :) 오늘 ${mostViewedCityName.value} 날씨를 가장 많이 확인하셨네요`
+})
 
 // 기온 정렬
 const sortOrder = ref(null) // null | 'desc' | 'asc'
@@ -133,6 +148,7 @@ const removeHistoryItem = (query) => {
 <template>
   <div class="weather-assignment">
     <h2 class="page-title">🌤️ 날씨 대시보드</h2>
+    <p v-if="mostViewedCityName" class="greeting-hint">{{ mostViewedText }}</p>
 
     <BaseDashboardCard>
       <SearchBar :search-query="searchQuery" @update-query="(val) => (searchQuery = val)" />
@@ -158,15 +174,17 @@ const removeHistoryItem = (query) => {
 
       <p class="search-summary">{{ searchSummary }}</p>
 
-      <WeatherCard
-        v-for="city in displayedWeatherList"
-        :key="city.id"
-        :city="city"
-        :is-selected="city.id === selectedCityId"
-        @select-card="selectCity"
-        @click-detail="goToDetail"
-        @toggle-favorite="toggleFavorite"
-      />
+      <div class="weather-card-list">
+        <WeatherCard
+          v-for="city in displayedWeatherList"
+          :key="city.id"
+          :city="city"
+          :is-selected="city.id === selectedCityId"
+          @select-card="selectCity"
+          @click-detail="goToDetail"
+          @toggle-favorite="toggleFavorite"
+        />
+      </div>
 
       <p v-if="displayedWeatherList.length === 0" class="empty-msg">
         검색 결과와 일치하는 도시가 없습니다.
@@ -179,11 +197,13 @@ const removeHistoryItem = (query) => {
 
 <style scoped>
 .weather-assignment {
-  max-width: 720px;
+  width: 100%;
+  max-width: clamp(320px, 92vw, 1200px);
   margin: 0 auto;
   padding: 32px 24px 48px;
+  box-sizing: border-box;
   font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .page-title {
@@ -203,13 +223,13 @@ const removeHistoryItem = (query) => {
 .search-summary {
   margin: 0 0 14px;
   font-size: 12px;
-  color: #9097a3;
+  color: var(--color-text);
 }
 
 .empty-msg {
   margin: 8px 0 0;
   padding: 16px;
-  color: #9097a3;
+  color: var(--color-text);
   font-size: 13px;
   text-align: center;
 }
@@ -224,5 +244,27 @@ const removeHistoryItem = (query) => {
   font-weight: 600;
   font-size: 14px;
   text-align: center;
+}
+
+.greeting-hint {
+  margin: 0 0 20px;
+  padding: 12px 16px;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-border);
+  border-radius: 12px;
+  color: var(--color-accent-text);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+}
+
+.weather-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.weather-card-list :deep(.weather-row) {
+  margin-bottom: 0;
 }
 </style>

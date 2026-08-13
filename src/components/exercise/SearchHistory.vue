@@ -36,9 +36,9 @@ defineEmits(['apply-history', 'remove-history'])
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid #cfd8e3;
-  background: #f4f7fc;
-  color: #374151;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 5px 6px 5px 12px;
   border-radius: 999px;
   font-size: 12px;

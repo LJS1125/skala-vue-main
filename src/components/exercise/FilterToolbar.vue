@@ -52,9 +52,9 @@ defineEmits(['toggle-sort-desc', 'toggle-sort-asc', 'toggle-favorites'])
 
 .sort-btn,
 .favorite-filter-btn {
-  border: 1px solid #cfd8e3;
-  background: #fff;
-  color: #374151;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 7px 12px;
   border-radius: 999px;
   font-size: 13px;

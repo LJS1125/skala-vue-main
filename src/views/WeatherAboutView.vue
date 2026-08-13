@@ -1,4 +1,8 @@
 <script setup>
+import { useVisitStore } from '@/stores/visitStore'
+
+const visitStore = useVisitStore()
+
 const features = [
   {
     icon: '🔍',
@@ -51,6 +55,10 @@ const usageTips = [
       </ul>
     </section>
 
+    <p v-if="visitStore.totalVisits > 0" class="visit-stat">
+      📊 지금까지 총 {{ visitStore.totalVisits }}번 상세정보를 확인하셨어요
+    </p>
+
     <footer class="dev-info">
       <h4 class="dev-info-title">개발 정보</h4>
       <p class="dev-info-stack">Vue 3 · Vue Router 4 · Vite</p>
@@ -89,10 +97,10 @@ const usageTips = [
 }
 
 .feature-card {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 16px;
-  background: #fff;
+  background: var(--color-background-soft);
   text-align: center;
 }
 
@@ -106,21 +114,21 @@ const usageTips = [
   margin: 0 0 4px;
   font-size: 13px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-heading);
 }
 
 .feature-desc {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .usage-section {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 16px 18px;
-  background: #f4f9ff;
+  background: var(--color-background-soft);
   margin-bottom: 24px;
 }
 
@@ -136,11 +144,23 @@ const usageTips = [
   padding-left: 18px;
   font-size: 13px;
   line-height: 1.8;
-  color: #374151;
+  color: var(--color-text);
+}
+
+.visit-stat {
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  background: var(--color-background-soft);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  color: #2a5cd8;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
 }
 
 .dev-info {
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border);
   padding-top: 14px;
   margin-bottom: 20px;
 }
@@ -149,13 +169,13 @@ const usageTips = [
   margin: 0 0 4px;
   font-size: 12px;
   font-weight: 700;
-  color: #9097a3;
+  color: var(--color-text);
 }
 
 .dev-info-stack {
   margin: 0;
   font-size: 12px;
-  color: #9097a3;
+  color: var(--color-text);
 }
 
 .home-btn {

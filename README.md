@@ -126,6 +126,31 @@ npm install
 npm run dev
 ```
 
+## 과제 4. Vue Router 적용
+
+Vue Router로 페이지를 분리했습니다.
+
+- 라우트: 홈 / 도시 상세(`:cityId`) / 지도 / 체크리스트 / 소개 / 404
+- Lazy Loading, Catch-all Route 적용
+- 상세보기 alert → `router.push()` 로 변경
+- 추가 view: 날씨 지도, 준비물 체크리스트
+
+## 과제 5. Pinia 적용
+
+Pinia로 전역 상태를 관리하도록 store를 도입했습니다.
+
+- `stores/configStore.js` — 온도 단위 store
+  - state `unit` (초기값 `'celsius'`)
+  - getter `unitSymbol` (`℃` / `℉`)
+  - action `toggleUnit` (`celsius` ↔ `fahrenheit` 전환)
+- `components/exercise/UnitToggler.vue` — 단위 전환 스위치 UI, Navigation Bar 옆에 배치
+- 메인(`WeatherHomeView` → `WeatherCard`, `TempSummary`)과 상세(`WeatherDetailView`) 화면의 온도 표시에 `configStore` 적용, `displayTemp` computed로 섭씨/화씨 변환
+- 본인 추가 store `stores/visitStore.js` — 도시 상세 조회 통계
+  - state `cityViewCounts`(도시별 조회수), `totalVisits`(총 조회수)
+  - getter `mostViewedCity` (가장 많이 본 도시)
+  - action `recordView(cityId)` (상세 페이지 진입 시 조회수 기록)
+  - 메인 화면 인사말과 소개 페이지에 통계 표시
+
 ## 폴더 구조
 
 ```

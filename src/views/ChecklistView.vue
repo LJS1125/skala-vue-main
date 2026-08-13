@@ -277,10 +277,10 @@ const checklistItems = computed(() => {
 }
 
 .checklist-card {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 24px;
-  background: #fff;
+  background: var(--color-background-soft);
   box-shadow: 0 2px 10px rgba(76, 139, 245, 0.08);
 }
 
@@ -294,7 +294,7 @@ const checklistItems = computed(() => {
 .checklist-condition {
   margin: 0 0 18px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .item-list {
@@ -310,10 +310,10 @@ const checklistItems = computed(() => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  border: 1px solid #eef2f7;
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   padding: 14px 16px;
-  background: #fafcff;
+  background: var(--color-background-mute);
 }
 
 .item-icon {
@@ -338,14 +338,14 @@ const checklistItems = computed(() => {
   margin: 0;
   font-size: 14px;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--color-heading);
 }
 
 .item-reason {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 1.5;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .badge {
@@ -368,7 +368,7 @@ const checklistItems = computed(() => {
 
 .empty-msg {
   padding: 16px;
-  color: #9097a3;
+  color: var(--color-text);
   font-size: 13px;
   text-align: center;
 }
@@ -376,6 +376,6 @@ const checklistItems = computed(() => {
 .not-found {
   padding: 40px 0;
   text-align: center;
-  color: #9097a3;
+  color: var(--color-text);
 }
 </style>

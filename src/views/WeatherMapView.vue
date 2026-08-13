@@ -2,8 +2,17 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { weatherList } from '../data/weatherData.js'
+import { useConfigStore } from '@/stores/configStore'
 
 const router = useRouter()
+const configStore = useConfigStore()
+
+const toDisplayTemp = (rawTemp) => {
+  if (configStore.unit === 'fahrenheit') {
+    return Math.round((rawTemp * 9) / 5 + 32)
+  }
+  return rawTemp
+}
 
 const CITY_POSITIONS = [
   { cityId: 'city_01', x: 140, y: 90 }, // 서울 - 위쪽 중앙
@@ -55,7 +64,7 @@ const goToDetail = (city) => {
             {{ marker.city.name }}
           </text>
           <text :x="marker.x + 14" :y="marker.y + 12" class="marker-temp">
-            {{ marker.city.temp }}°C
+            {{ toDisplayTemp(marker.city.temp) }}{{ configStore.unitSymbol }}
           </text>
         </g>
       </svg>
@@ -90,10 +99,10 @@ const goToDetail = (city) => {
 }
 
 .map-card {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 24px;
-  background: #fff;
+  background: var(--color-background-soft);
   box-shadow: 0 2px 10px rgba(76, 139, 245, 0.08);
 }
 
@@ -104,14 +113,14 @@ const goToDetail = (city) => {
 }
 
 .peninsula {
-  fill: #eef2f7;
-  stroke: #cfd8e3;
+  fill: var(--color-background-mute);
+  stroke: var(--color-border);
   stroke-width: 2;
 }
 
 .jeju-island {
-  fill: #eef2f7;
-  stroke: #cfd8e3;
+  fill: var(--color-background-mute);
+  stroke: var(--color-border);
   stroke-width: 2;
 }
 
@@ -140,12 +149,12 @@ const goToDetail = (city) => {
 .marker-name {
   font-size: 13px;
   font-weight: 700;
-  fill: #1f2937;
+  fill: var(--color-heading);
 }
 
 .marker-temp {
   font-size: 11px;
-  fill: #6b7280;
+  fill: var(--color-text);
 }
 
 .city-marker.is-hot .marker-name {
@@ -162,7 +171,7 @@ const goToDetail = (city) => {
   gap: 20px;
   margin-top: 16px;
   font-size: 13px;
-  color: #6b7280;
+  color: var(--color-text);
 }
 
 .legend-item {

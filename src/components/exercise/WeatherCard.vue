@@ -1,4 +1,6 @@
 <script setup>
+import { useConfigStore } from '@/stores/configStore'
+
 defineProps({
   city: {
     type: Object,
@@ -11,6 +13,15 @@ defineProps({
 })
 
 const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
+
+const configStore = useConfigStore()
+
+const toDisplayTemp = (rawTemp) => {
+  if (configStore.unit === 'fahrenheit') {
+    return Math.round((rawTemp * 9) / 5 + 32)
+  }
+  return rawTemp
+}
 </script>
 
 <template>
@@ -31,7 +42,7 @@ const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
 
     <div class="weather-row__info">
       <p class="city-name">{{ city.name }} ({{ city.status }})</p>
-      <p class="temp">현재 기온: {{ city.temp }}°C</p>
+      <p class="temp">현재 기온: {{ toDisplayTemp(city.temp) }}{{ configStore.unitSymbol }}</p>
 
       <span v-if="city.temp >= 25" class="badge hot">🔥 더움 (25도 이상)</span>
       <span v-else class="badge cool">❄️ 선선함 (25도 미만)</span>
@@ -52,9 +63,9 @@ const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
   gap: 16px;
   padding: 16px;
   margin-bottom: 12px;
-  border: 2px solid #eef2f7;
+  border: 2px solid var(--color-border);
   border-radius: 12px;
-  background: #fafcff;
+  background: var(--color-background-soft);
   cursor: pointer;
   outline: none;
   transition:
@@ -116,12 +127,13 @@ const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
   margin: 0 0 4px;
   font-size: 16px;
   font-weight: 700;
+  color: var(--color-heading);
 }
 
 .temp {
   margin: 0 0 8px;
   font-size: 14px;
-  color: #4b5563;
+  color: var(--color-text);
 }
 
 .badge {
@@ -145,14 +157,14 @@ const emit = defineEmits(['select-card', 'click-detail', 'toggle-favorite'])
 .meta {
   margin: 8px 0 0;
   font-size: 12px;
-  color: #9097a3;
+  color: var(--color-text);
 }
 
 .detail-btn {
   flex-shrink: 0;
-  border: 1px solid #cfd8e3;
-  background: #fff;
-  color: #374151;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 8px 14px;
   border-radius: 8px;
   font-size: 13px;

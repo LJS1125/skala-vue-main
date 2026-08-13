@@ -2,9 +2,13 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { weatherList } from '../data/weatherData.js'
+import { useConfigStore } from '@/stores/configStore'
+import { useVisitStore } from '@/stores/visitStore'
 
 const route = useRoute()
 const router = useRouter()
+const configStore = useConfigStore()
+const visitStore = useVisitStore()
 
 const city = ref(null)
 const journey = ref([])
@@ -24,8 +28,25 @@ onMounted(() => {
   if (found) {
     city.value = found
     journey.value = buildJourney(found.temp)
+    visitStore.recordView(route.params.cityId)
   }
 })
+
+// 화씨 단위 선택 시 표시용 온도 변환
+const displayTemp = computed(() => {
+  if (!city.value) return null
+  if (configStore.unit === 'fahrenheit') {
+    return Math.round((city.value.temp * 9) / 5 + 32)
+  }
+  return city.value.temp
+})
+
+const toDisplayTemp = (rawTemp) => {
+  if (configStore.unit === 'fahrenheit') {
+    return Math.round((rawTemp * 9) / 5 + 32)
+  }
+  return rawTemp
+}
 
 // 곡선 그래프 좌표 계산 (Catmull-Rom → Bezier)
 const CHART_WIDTH = 320
@@ -97,7 +118,7 @@ const goToChecklist = () => {
           <h2 class="city-name">{{ city.name }}</h2>
           <p class="city-status">{{ city.status }}</p>
         </div>
-        <p class="city-temp">{{ city.temp }}°C</p>
+        <p class="city-temp">{{ displayTemp }}{{ configStore.unitSymbol }}</p>
       </header>
 
       <p class="city-meta">💧 습도 {{ city.humidity }}% · 🌬️ 바람 {{ city.wind }}m/s</p>
@@ -114,7 +135,7 @@ const goToChecklist = () => {
           <g v-for="point in chartPoints" :key="point.label">
             <circle :cx="point.x" :cy="point.y" r="3.5" class="journey-dot" />
             <text :x="point.x" :y="point.y - 8" class="journey-temp-label">
-              {{ point.temp }}°
+              {{ toDisplayTemp(point.temp) }}{{ configStore.unitSymbol }}
             </text>
             <text :x="point.x" :y="CHART_HEIGHT - 2" class="journey-time-label">
               {{ point.label }}
@@ -152,7 +173,7 @@ const goToChecklist = () => {
   margin: 0 auto;
   padding: 24px 20px 48px;
   font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-  color: #1f2937;
+  color: var(--color-text);
 }
 
 .back-link {
@@ -169,10 +190,10 @@ const goToChecklist = () => {
 }
 
 .journey-card {
-  border: 1px solid #dbe4f0;
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 24px;
-  background: #fff;
+  background: var(--color-background-soft);
   box-shadow: 0 2px 10px rgba(76, 139, 245, 0.08);
 }
 
@@ -186,11 +207,12 @@ const goToChecklist = () => {
   margin: 0 0 4px;
   font-size: 22px;
   font-weight: 800;
+  color: var(--color-heading);
 }
 
 .city-status {
   margin: 0;
-  color: #6b7280;
+  color: var(--color-text);
   font-size: 14px;
 }
 
@@ -204,7 +226,7 @@ const goToChecklist = () => {
 .city-meta {
   margin: 12px 0 0;
   font-size: 12px;
-  color: #9097a3;
+  color: var(--color-text);
 }
 
 .timeline-section {
@@ -236,23 +258,24 @@ const goToChecklist = () => {
 
 .journey-temp-label {
   font-size: 9px;
-  fill: #374151;
+  fill: var(--color-heading);
   text-anchor: middle;
   font-weight: 600;
 }
 
 .journey-time-label {
   font-size: 8px;
-  fill: #9097a3;
+  fill: var(--color-text);
   text-anchor: middle;
 }
 
 .summary-text {
   margin: 20px 0 0;
   padding: 12px 14px;
-  background: #f4f9ff;
-  border: 1px solid #dbe4f0;
+  background: var(--color-background-mute);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
+  color: var(--color-heading);
   font-size: 14px;
   font-weight: 600;
   text-align: center;
@@ -267,9 +290,9 @@ const goToChecklist = () => {
 .favorite-btn,
 .checklist-btn {
   flex: 1;
-  border: 1px solid #cfd8e3;
-  background: #fff;
-  color: #374151;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-soft);
+  color: var(--color-text);
   padding: 12px;
   border-radius: 10px;
   font-size: 13px;
@@ -296,6 +319,6 @@ const goToChecklist = () => {
 .not-found {
   padding: 40px 0;
   text-align: center;
-  color: #9097a3;
+  color: var(--color-text);
 }
 </style>
