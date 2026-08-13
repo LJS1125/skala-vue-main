@@ -151,6 +151,39 @@ Pinia로 전역 상태를 관리하도록 store를 도입했습니다.
   - action `recordView(cityId)` (상세 페이지 진입 시 조회수 기록)
   - 메인 화면 인사말과 소개 페이지에 통계 표시
 
+  ## 과제 6. Axios 활용
+
+### 과제 요구사항
+1. OpenWeatherMap API를 통해 실제 날씨 데이터를 가져와 적용
+2. OpenWeatherMap 내 다른 API를 추가하여 기능 확장
+3. 기타 외부 API를 추가하여 기능 확장
+
+### 구현 내용
+
+**1. OpenWeatherMap 현재 날씨 연동**
+- axios로 OpenWeatherMap 현재 날씨 API 연동 (`weatherStore`)
+- 서울·부산·대구·인천·광주·대전·울산·세종·제주·울릉도 10개 지역 실시간 날씨 조회
+- 기존 정적(mock) 데이터를 실시간 API 데이터로 전면 교체
+- 지역별 최고/최저 기온 요약("가장 더운 곳", "가장 시원한 곳") 실시간 반영
+
+**2. OpenWeatherMap 5일 예보 API 추가 (요구사항 2)**
+- forecast API 연동 (`forecastStore`)
+- 3시간 간격 응답을 날짜별로 그룹핑해 5일 예보로 변환
+
+**3. 카카오 로컬 API 연동 (요구사항 3)**
+- 브라우저 Geolocation으로 좌표 획득 → 카카오 좌표-행정구역 변환 API로 실제 지역명 추출 (`locationStore`)
+- 감지된 위치 기준 날씨 카드 자동 표시
+
+**4. 생활밀착형 지수 추가**
+- 온도·습도·날씨 상태 기반으로 옷차림 추천, 우산 필요 여부, 체감 지수를 계산해 카드에 표시
+
+**5. 도시 검색 기능**
+- 10개 고정 지역 외 임의의 도시명을 입력해 실시간 날씨를 조회하는 검색 기능 추가
+
+**6. API 키 관리**
+- `.env.local`에 API 키 분리 관리 (`VITE_OPENWEATHER_API_KEY`, `VITE_KAKAO_API_KEY`)
+- `.gitignore`로 커밋 방지
+
 ## 폴더 구조
 
 ```

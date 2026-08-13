@@ -1,14 +1,18 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { weatherList } from '../data/weatherData.js'
 import { useConfigStore } from '@/stores/configStore'
 import { useVisitStore } from '@/stores/visitStore'
+import { useWeatherStore } from '@/stores/weatherStore'
+import { useForecastStore } from '@/stores/forecastStore'
+import ForecastList from '../components/exercise/ForecastList.vue'
 
 const route = useRoute()
 const router = useRouter()
 const configStore = useConfigStore()
 const visitStore = useVisitStore()
+const weatherStore = useWeatherStore()
+const forecastStore = useForecastStore()
 
 const city = ref(null)
 const journey = ref([])
@@ -23,12 +27,22 @@ const buildJourney = (baseTemp) => {
   })
 }
 
+// 실시간 API 응답이 onMounted 시점엔 아직 안 왔을 수 있어 temp가 null일 수 있음.
+// temp가 실제로 채워지는 순간(비동기 fetch 완료 시) journey를 다시 계산한다.
+watch(
+  () => city.value?.temp,
+  (temp) => {
+    if (temp !== null && temp !== undefined) journey.value = buildJourney(temp)
+  },
+  { immediate: true },
+)
+
 onMounted(() => {
-  const found = weatherList.find((c) => c.id === route.params.cityId)
+  const found = weatherStore.weatherList.find((c) => c.id === route.params.cityId)
   if (found) {
     city.value = found
-    journey.value = buildJourney(found.temp)
     visitStore.recordView(route.params.cityId)
+    forecastStore.fetchForecastByCity(route.params.cityId)
   }
 })
 
@@ -100,7 +114,7 @@ const summaryText = computed(() => {
 })
 
 const toggleFavorite = () => {
-  if (city.value) city.value.isFavorite = !city.value.isFavorite
+  if (city.value) weatherStore.toggleFavorite(city.value)
 }
 
 const goToChecklist = () => {
@@ -112,7 +126,10 @@ const goToChecklist = () => {
   <div class="detail-page">
     <RouterLink to="/" class="back-link">← 메인으로 돌아가기</RouterLink>
 
-    <div v-if="city" class="journey-card">
+    <p v-if="weatherStore.isLoading" class="empty-msg">⏳ 날씨 정보를 불러오는 중입니다...</p>
+    <p v-else-if="weatherStore.error" class="empty-msg">{{ weatherStore.error }}</p>
+
+    <div v-else-if="city" class="journey-card">
       <header class="city-header">
         <div>
           <h2 class="city-name">{{ city.name }}</h2>
@@ -143,6 +160,12 @@ const goToChecklist = () => {
           </g>
         </svg>
       </section>
+
+      <ForecastList
+        :forecast-list="forecastStore.forecastList"
+        :is-loading="forecastStore.isLoading"
+        :error="forecastStore.error"
+      />
 
       <p class="summary-text">{{ summaryText }}</p>
 
@@ -320,5 +343,12 @@ const goToChecklist = () => {
   padding: 40px 0;
   text-align: center;
   color: var(--color-text);
+}
+
+.empty-msg {
+  padding: 40px 0;
+  text-align: center;
+  color: var(--color-text);
+  font-size: 13px;
 }
 </style>

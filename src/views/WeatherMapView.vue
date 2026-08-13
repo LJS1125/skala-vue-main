@@ -1,11 +1,12 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { weatherList } from '../data/weatherData.js'
 import { useConfigStore } from '@/stores/configStore'
+import { useWeatherStore } from '@/stores/weatherStore'
 
 const router = useRouter()
 const configStore = useConfigStore()
+const weatherStore = useWeatherStore()
 
 const toDisplayTemp = (rawTemp) => {
   if (configStore.unit === 'fahrenheit') {
@@ -16,15 +17,20 @@ const toDisplayTemp = (rawTemp) => {
 
 const CITY_POSITIONS = [
   { cityId: 'city_01', x: 140, y: 90 }, // 서울 - 위쪽 중앙
-  { cityId: 'city_02', x: 140, y: 118 }, // 수원 - 서울 바로 아래
-  { cityId: 'city_05', x: 195, y: 110 }, // 강릉 - 오른쪽 위(동해안)
-  { cityId: 'city_03', x: 200, y: 290 }, // 부산 - 오른쪽 아래
-  { cityId: 'city_04', x: 110, y: 380 }, // 제주 - 맨 아래 별도 섬
+  { cityId: 'city_04', x: 112, y: 96 }, // 인천 - 서울 서쪽
+  { cityId: 'city_08', x: 148, y: 172 }, // 세종 - 중부
+  { cityId: 'city_06', x: 158, y: 194 }, // 대전 - 중부
+  { cityId: 'city_05', x: 118, y: 252 }, // 광주 - 남서쪽
+  { cityId: 'city_03', x: 190, y: 228 }, // 대구 - 남동쪽
+  { cityId: 'city_07', x: 206, y: 256 }, // 울산 - 동해안 남부
+  { cityId: 'city_02', x: 200, y: 290 }, // 부산 - 오른쪽 아래
+  { cityId: 'city_09', x: 110, y: 380 }, // 제주 - 맨 아래 별도 섬
+  { cityId: 'city_10', x: 250, y: 140 }, // 울릉도 - 동쪽 먼바다 별도 섬
 ]
 
 const mapMarkers = computed(() =>
   CITY_POSITIONS.map((pos) => {
-    const city = weatherList.find((c) => c.id === pos.cityId)
+    const city = weatherStore.weatherList.find((c) => c.id === pos.cityId)
     return { ...pos, city }
   }).filter((marker) => marker.city),
 )
@@ -39,46 +45,52 @@ const goToDetail = (city) => {
     <h2 class="page-title">🗺️ 날씨 지도</h2>
 
     <div class="map-card">
-      <svg class="korea-map" viewBox="0 0 300 420" role="img" aria-label="전국 도시별 날씨 지도">
-        <path
-          class="peninsula"
-          d="M 130 40 L 168 34 L 195 68 L 188 108 L 210 148 L 203 198
-             L 228 228 L 218 268 L 188 298 L 168 320 L 140 330
-             L 118 300 L 98 258 L 90 200 L 96 150 L 80 110 L 90 68 Z"
-        />
-        <ellipse class="jeju-island" cx="110" cy="380" rx="38" ry="16" />
+      <p v-if="weatherStore.isLoading" class="empty-msg">⏳ 날씨 정보를 불러오는 중입니다...</p>
+      <p v-else-if="weatherStore.error" class="empty-msg">{{ weatherStore.error }}</p>
 
-        <g
-          v-for="marker in mapMarkers"
-          :key="marker.cityId"
-          class="city-marker"
-          :class="{ 'is-hot': marker.city.temp >= 25, 'is-cool': marker.city.temp < 25 }"
-          tabindex="0"
-          role="button"
-          :aria-label="`${marker.city.name} 상세보기`"
-          @click="goToDetail(marker.city)"
-          @keyup.enter="goToDetail(marker.city)"
-        >
-          <circle :cx="marker.x" :cy="marker.y" r="9" class="marker-dot" />
-          <text :x="marker.x + 14" :y="marker.y - 3" class="marker-name">
-            {{ marker.city.name }}
-          </text>
-          <text :x="marker.x + 14" :y="marker.y + 12" class="marker-temp">
-            {{ toDisplayTemp(marker.city.temp) }}{{ configStore.unitSymbol }}
-          </text>
-        </g>
-      </svg>
+      <template v-else>
+        <svg class="korea-map" viewBox="0 0 300 420" role="img" aria-label="전국 도시별 날씨 지도">
+          <path
+            class="peninsula"
+            d="M 130 40 L 168 34 L 195 68 L 188 108 L 210 148 L 203 198
+               L 228 228 L 218 268 L 188 298 L 168 320 L 140 330
+               L 118 300 L 98 258 L 90 200 L 96 150 L 80 110 L 90 68 Z"
+          />
+          <ellipse class="jeju-island" cx="110" cy="380" rx="38" ry="16" />
+          <ellipse class="ulleungdo-island" cx="250" cy="140" rx="13" ry="10" />
 
-      <div class="legend">
-        <span class="legend-item">
-          <span class="legend-dot is-hot"></span>
-          25도 이상
-        </span>
-        <span class="legend-item">
-          <span class="legend-dot is-cool"></span>
-          25도 미만
-        </span>
-      </div>
+          <g
+            v-for="marker in mapMarkers"
+            :key="marker.cityId"
+            class="city-marker"
+            :class="{ 'is-hot': marker.city.temp >= 25, 'is-cool': marker.city.temp < 25 }"
+            tabindex="0"
+            role="button"
+            :aria-label="`${marker.city.name} 상세보기`"
+            @click="goToDetail(marker.city)"
+            @keyup.enter="goToDetail(marker.city)"
+          >
+            <circle :cx="marker.x" :cy="marker.y" r="9" class="marker-dot" />
+            <text :x="marker.x + 14" :y="marker.y - 3" class="marker-name">
+              {{ marker.city.name }}
+            </text>
+            <text :x="marker.x + 14" :y="marker.y + 12" class="marker-temp">
+              {{ toDisplayTemp(marker.city.temp) }}{{ configStore.unitSymbol }}
+            </text>
+          </g>
+        </svg>
+
+        <div class="legend">
+          <span class="legend-item">
+            <span class="legend-dot is-hot"></span>
+            25도 이상
+          </span>
+          <span class="legend-item">
+            <span class="legend-dot is-cool"></span>
+            25도 미만
+          </span>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -106,6 +118,14 @@ const goToDetail = (city) => {
   box-shadow: 0 2px 10px rgba(76, 139, 245, 0.08);
 }
 
+.empty-msg {
+  margin: 0;
+  padding: 16px;
+  color: var(--color-text);
+  font-size: 13px;
+  text-align: center;
+}
+
 .korea-map {
   width: 100%;
   height: auto;
@@ -118,7 +138,8 @@ const goToDetail = (city) => {
   stroke-width: 2;
 }
 
-.jeju-island {
+.jeju-island,
+.ulleungdo-island {
   fill: var(--color-background-mute);
   stroke: var(--color-border);
   stroke-width: 2;

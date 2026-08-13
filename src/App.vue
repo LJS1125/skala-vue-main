@@ -1,10 +1,18 @@
 <script setup>
+import { onMounted } from 'vue'
 import UnitToggler from '@/components/exercise/UnitToggler.vue'
+import { useWeatherStore } from '@/stores/weatherStore'
+
+const weatherStore = useWeatherStore()
+
+onMounted(() => {
+  weatherStore.fetchAllWeather()
+})
 </script>
 
 <template>
   <div class="dashboard-wrapper">
-    <h1 class="app-title">과제 5. Pinia 적용</h1>
+    <h1 class="app-title">과제 6. Axios 활용</h1>
     <div class="topbar">
       <nav class="navigation-bar">
         <RouterLink to="/" class="nav-item">🌦️ 날씨 대시보드</RouterLink>
@@ -68,7 +76,6 @@ body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  /* 대시보드 카드 영역(WeatherHomeView의 max-width)과 폭을 맞춰서 topbar가 더 넓게 튀어나오지 않도록 */
   max-width: 1152px;
   width: 100%;
   margin: 0 auto 20px;

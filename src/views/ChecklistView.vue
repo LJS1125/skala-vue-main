@@ -1,18 +1,25 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { weatherList } from '../data/weatherData.js'
+import { useWeatherStore } from '@/stores/weatherStore'
+import { getLifestyleIndices } from '@/utils/lifestyleIndex'
 
 const route = useRoute()
+const weatherStore = useWeatherStore()
 
-const city = computed(() => weatherList.find((c) => c.id === route.params.cityId) || null)
+const city = computed(
+  () => weatherStore.weatherList.find((c) => c.id === route.params.cityId) || null,
+)
+
+// 옷차림/우산 여부는 생활 지수 요약이 대표하므로, 체크리스트는 그 외 보조 준비물만 다룬다
+const lifestyle = computed(() => getLifestyleIndices(city.value))
 
 const checklistItems = computed(() => {
   if (!city.value) return []
   const { temp, status, humidity, wind } = city.value
   const items = []
 
-  // 기온 기반
+  // 기온 기반 보조 준비물 (옷차림 자체는 상단 생활 지수 요약이 대표하므로 제외)
   if (temp >= 28) {
     items.push(
       {
@@ -45,76 +52,34 @@ const checklistItems = computed(() => {
       },
     )
   } else if (temp >= 25) {
-    items.push(
-      {
-        key: 'light_clothes',
-        icon: '👕',
-        label: '가벼운 옷차림',
-        reason: '활동하기 좋은 포근한 날씨예요.',
-        priority: 'recommended',
-      },
-      {
-        key: 'handkerchief',
-        icon: '🧻',
-        label: '손수건',
-        reason: '땀이 날 수 있어요.',
-        priority: 'recommended',
-      },
-    )
-  } else if (temp >= 20) {
     items.push({
-      key: 'cardigan',
-      icon: '🧶',
-      label: '얇은 가디건',
-      reason: '아침저녁으로 일교차가 있을 수 있어요.',
+      key: 'handkerchief',
+      icon: '🧻',
+      label: '손수건',
+      reason: '땀이 날 수 있어요.',
       priority: 'recommended',
     })
   } else if (temp >= 15) {
-    items.push(
-      {
-        key: 'outerwear',
-        icon: '🧥',
-        label: '겉옷',
-        reason: '쌀쌀한 날씨예요. 얇은 겉옷을 챙기세요.',
-        priority: 'essential',
-      },
-      {
-        key: 'warm_drink',
-        icon: '☕',
-        label: '따뜻한 음료',
-        reason: '몸을 따뜻하게 데워보세요.',
-        priority: 'recommended',
-      },
-    )
+    items.push({
+      key: 'warm_drink',
+      icon: '☕',
+      label: '따뜻한 음료',
+      reason: '몸을 따뜻하게 데워보세요.',
+      priority: 'recommended',
+    })
   } else {
-    items.push(
-      {
-        key: 'thick_coat',
-        icon: '🧥',
-        label: '두꺼운 외투',
-        reason: '기온이 많이 낮아요. 보온에 신경 쓰세요.',
-        priority: 'essential',
-      },
-      {
-        key: 'scarf',
-        icon: '🧣',
-        label: '목도리',
-        reason: '목과 목덜미를 따뜻하게 지켜주세요.',
-        priority: 'essential',
-      },
-    )
+    items.push({
+      key: 'gloves',
+      icon: '🧤',
+      label: '장갑',
+      reason: '기온이 많이 낮아요. 손을 따뜻하게 보호하세요.',
+      priority: 'recommended',
+    })
   }
 
-  // 날씨 상태 기반
+  // 날씨 상태 기반 (우산 자체는 상단 생활 지수 요약이 대표하므로 제외)
   if (status.includes('비')) {
     items.push(
-      {
-        key: 'umbrella',
-        icon: '☔',
-        label: '우산',
-        reason: '오늘은 비 소식이 있어요. 우산을 꼭 챙기세요.',
-        priority: 'essential',
-      },
       {
         key: 'waterproof_shoes',
         icon: '👟',
@@ -227,9 +192,20 @@ const checklistItems = computed(() => {
   <div class="checklist-page">
     <RouterLink to="/" class="back-link">← 메인으로 돌아가기</RouterLink>
 
-    <div v-if="city" class="checklist-card">
+    <p v-if="weatherStore.isLoading" class="empty-msg">⏳ 날씨 정보를 불러오는 중입니다...</p>
+    <p v-else-if="weatherStore.error" class="empty-msg">{{ weatherStore.error }}</p>
+
+    <div v-else-if="city" class="checklist-card">
       <h2 class="checklist-title">🎒 {{ city.name }}, 오늘 이건 챙기세요</h2>
       <p class="checklist-condition">현재 {{ city.temp }}°C · {{ city.status }}</p>
+
+      <p v-if="lifestyle" class="lifestyle-row">
+        {{ lifestyle.clothing.icon }} {{ lifestyle.clothing.label }} ·
+        {{ lifestyle.umbrella.icon }} {{ lifestyle.umbrella.label }} ·
+        {{ lifestyle.discomfort.icon }} {{ lifestyle.discomfort.label }}
+      </p>
+
+      <p class="section-label">그 외 챙기면 좋은 준비물</p>
 
       <ul v-if="checklistItems.length > 0" class="item-list">
         <li v-for="item in checklistItems" :key="item.key" class="item-card">
@@ -292,8 +268,27 @@ const checklistItems = computed(() => {
 }
 
 .checklist-condition {
-  margin: 0 0 18px;
+  margin: 0 0 12px;
   font-size: 13px;
+  color: var(--color-text);
+}
+
+.lifestyle-row {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-border);
+  border-radius: 10px;
+  color: var(--color-accent-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.section-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
   color: var(--color-text);
 }
 

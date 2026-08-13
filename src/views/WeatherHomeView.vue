@@ -1,8 +1,12 @@
 <script setup>
-import { ref, computed, watch, watchEffect } from 'vue'
+import { ref, computed, watch, watchEffect, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { weatherList } from '../data/weatherData.js'
 import { useVisitStore } from '@/stores/visitStore'
+import { useWeatherStore } from '@/stores/weatherStore'
+import { useLocationStore } from '@/stores/locationStore'
+import { fetchCurrentWeatherByCoord } from '@/api/openWeatherApi.js'
+import { fetchCoordByAddress, fetchCoordByKeyword } from '@/api/kakaoApi.js'
+import { getLifestyleIndices } from '@/utils/lifestyleIndex'
 import BaseDashboardCard from '../components/exercise/BaseDashboardCard.vue'
 import SearchBar from '../components/exercise/SearchBar.vue'
 import SearchHistory from '../components/exercise/SearchHistory.vue'
@@ -12,11 +16,98 @@ import FilterToolbar from '../components/exercise/FilterToolbar.vue'
 
 const router = useRouter()
 const visitStore = useVisitStore()
+const weatherStore = useWeatherStore()
+const locationStore = useLocationStore()
+
+onMounted(() => {
+  locationStore.detectLocation()
+})
+
+// 내 위치 날씨 카드: locationStore가 감지한 좌표를 재사용해 별도로 조회
+watch(
+  () => locationStore.coords,
+  (coords) => {
+    if (coords) weatherStore.fetchMyLocationWeather(coords.lat, coords.lon)
+  },
+  { immediate: true },
+)
+
+const myLocationCity = computed(() => {
+  if (weatherStore.myLocationStatus !== 'ready' || !weatherStore.myLocationWeather) return null
+  return {
+    ...weatherStore.myLocationWeather,
+    name: locationStore.regionName ? `내 위치 · ${locationStore.regionName}` : '내 위치',
+  }
+})
+
+const myLocationGreeting = computed(() => {
+  if (!myLocationCity.value) return ''
+  const lifestyle = getLifestyleIndices(myLocationCity.value)
+  if (!lifestyle) return ''
+  const place = locationStore.regionName || '내 위치'
+  return `📍 현재 위치: ${place}, 오늘은 ${lifestyle.clothing.label}이에요`
+})
+
+// 자유 도시 검색 (10개 고정 목록·내 위치 카드와 별개)
+const citySearchInput = ref('')
+const citySearchStatus = ref('idle') // idle | loading | success | error
+const citySearchResult = ref(null)
+const citySearchError = ref('')
+
+// 카카오 주소 검색으로 먼저 좌표를 찾고, 실패하면 키워드 검색으로 한 번 더 시도
+const resolvePlaceCoord = async (query) => {
+  const addressRes = await fetchCoordByAddress(query)
+  const addressDoc = addressRes.data.documents?.[0]
+  if (addressDoc) {
+    return { lat: Number(addressDoc.y), lon: Number(addressDoc.x), name: addressDoc.address_name }
+  }
+
+  const keywordRes = await fetchCoordByKeyword(query)
+  const keywordDoc = keywordRes.data.documents?.[0]
+  if (keywordDoc) {
+    return { lat: Number(keywordDoc.y), lon: Number(keywordDoc.x), name: keywordDoc.place_name }
+  }
+
+  return null
+}
+
+const searchCity = async () => {
+  const query = citySearchInput.value.trim()
+  if (!query) return
+
+  citySearchStatus.value = 'loading'
+  citySearchError.value = ''
+  citySearchResult.value = null
+
+  try {
+    const place = await resolvePlaceCoord(query)
+    if (!place) {
+      citySearchError.value = '도시를 찾을 수 없습니다'
+      citySearchStatus.value = 'error'
+      return
+    }
+
+    const res = await fetchCurrentWeatherByCoord(place.lat, place.lon)
+    citySearchResult.value = {
+      id: `search-${query}`,
+      name: place.name,
+      temp: Math.round(res.data.main.temp),
+      status: res.data.weather[0].description,
+      humidity: res.data.main.humidity,
+      wind: res.data.wind.speed,
+    }
+    citySearchStatus.value = 'success'
+  } catch (err) {
+    console.error(err)
+    citySearchError.value = '도시를 찾을 수 없습니다'
+    citySearchStatus.value = 'error'
+  }
+}
 
 const mostViewedCityName = computed(() => {
   const cityId = visitStore.mostViewedCity
   if (!cityId) return null
-  const city = weatherList.find((c) => c.id === cityId)
+  const city = weatherStore.weatherList.find((c) => c.id === cityId)
   return city ? city.name : null
 })
 
@@ -41,14 +132,14 @@ const toggleFavoritesOnly = () => {
   showFavoritesOnly.value = !showFavoritesOnly.value
 }
 const toggleFavorite = (city) => {
-  city.isFavorite = !city.isFavorite
+  weatherStore.toggleFavorite(city)
 }
 
 // 검색어로 필터링 (비어있으면 원본 전체)
 const filteredWeatherList = computed(() => {
   const query = searchQuery.value.trim()
-  if (!query) return weatherList
-  return weatherList.filter((city) => city.name.includes(query))
+  if (!query) return weatherStore.weatherList
+  return weatherStore.weatherList.filter((city) => city.name.includes(query))
 })
 
 // 정렬 + 즐겨찾기 필터를 합쳐서 실제 화면에 뿌려줄 목록
@@ -147,8 +238,40 @@ const removeHistoryItem = (query) => {
 
 <template>
   <div class="weather-assignment">
-    <h2 class="page-title">🌤️ 날씨 대시보드</h2>
+    <h2 class="page-title">🌤️ 오늘 뭐 입지? 생활 날씨 대시보드</h2>
     <p v-if="mostViewedCityName" class="greeting-hint">{{ mostViewedText }}</p>
+    <p v-if="myLocationGreeting" class="greeting-hint">{{ myLocationGreeting }}</p>
+    <p v-else-if="locationStore.isLoading" class="greeting-hint">📍 위치 확인 중...</p>
+    <p v-else-if="locationStore.error" class="greeting-hint">📍 위치 정보를 가져올 수 없어요</p>
+
+    <BaseDashboardCard v-if="myLocationCity || locationStore.isLoading || locationStore.error">
+      <h3 class="section-title">📍 내 위치 날씨</h3>
+      <WeatherCard v-if="myLocationCity" :city="myLocationCity" :interactive="false" />
+      <p v-else-if="locationStore.isLoading" class="empty-msg">⏳ 내 위치 날씨를 확인하는 중입니다...</p>
+      <p v-else class="empty-msg">위치 정보를 가져올 수 없어요</p>
+    </BaseDashboardCard>
+
+    <BaseDashboardCard>
+      <h3 class="section-title">🌍 다른 도시 날씨 검색</h3>
+      <div class="city-search-row">
+        <input
+          v-model="citySearchInput"
+          type="text"
+          class="city-search-input"
+          placeholder="목록에 없는 도시 이름 입력 (예: 춘천)"
+          @keyup.enter="searchCity"
+        />
+        <button type="button" class="city-search-btn" @click="searchCity">검색</button>
+      </div>
+
+      <p v-if="citySearchStatus === 'loading'" class="empty-msg">검색 중...</p>
+      <p v-else-if="citySearchStatus === 'error'" class="empty-msg">{{ citySearchError }}</p>
+      <WeatherCard
+        v-else-if="citySearchStatus === 'success' && citySearchResult"
+        :city="citySearchResult"
+        :interactive="false"
+      />
+    </BaseDashboardCard>
 
     <BaseDashboardCard>
       <SearchBar :search-query="searchQuery" @update-query="(val) => (searchQuery = val)" />
@@ -162,33 +285,38 @@ const removeHistoryItem = (query) => {
     <BaseDashboardCard>
       <h3 class="section-title">📋 지역별 날씨 현황</h3>
 
-      <TempSummary :hottest-city="hottestCity" :coolest-city="coolestCity" />
+      <p v-if="weatherStore.isLoading" class="empty-msg">⏳ 날씨 정보를 불러오는 중입니다...</p>
+      <p v-else-if="weatherStore.error" class="empty-msg">{{ weatherStore.error }}</p>
 
-      <FilterToolbar
-        :sort-order="sortOrder"
-        :show-favorites-only="showFavoritesOnly"
-        @toggle-sort-desc="toggleSortDesc"
-        @toggle-sort-asc="toggleSortAsc"
-        @toggle-favorites="toggleFavoritesOnly"
-      />
+      <template v-else>
+        <TempSummary :hottest-city="hottestCity" :coolest-city="coolestCity" />
 
-      <p class="search-summary">{{ searchSummary }}</p>
-
-      <div class="weather-card-list">
-        <WeatherCard
-          v-for="city in displayedWeatherList"
-          :key="city.id"
-          :city="city"
-          :is-selected="city.id === selectedCityId"
-          @select-card="selectCity"
-          @click-detail="goToDetail"
-          @toggle-favorite="toggleFavorite"
+        <FilterToolbar
+          :sort-order="sortOrder"
+          :show-favorites-only="showFavoritesOnly"
+          @toggle-sort-desc="toggleSortDesc"
+          @toggle-sort-asc="toggleSortAsc"
+          @toggle-favorites="toggleFavoritesOnly"
         />
-      </div>
 
-      <p v-if="displayedWeatherList.length === 0" class="empty-msg">
-        검색 결과와 일치하는 도시가 없습니다.
-      </p>
+        <p class="search-summary">{{ searchSummary }}</p>
+
+        <div class="weather-card-list">
+          <WeatherCard
+            v-for="city in displayedWeatherList"
+            :key="city.id"
+            :city="city"
+            :is-selected="city.id === selectedCityId"
+            @select-card="selectCity"
+            @click-detail="goToDetail"
+            @toggle-favorite="toggleFavorite"
+          />
+        </div>
+
+        <p v-if="displayedWeatherList.length === 0" class="empty-msg">
+          검색 결과와 일치하는 도시가 없습니다.
+        </p>
+      </template>
     </BaseDashboardCard>
 
     <p class="status-bar">{{ selectedCityInfo }}</p>
@@ -256,6 +384,50 @@ const removeHistoryItem = (query) => {
   font-weight: 600;
   font-size: 13px;
   text-align: center;
+}
+
+.city-search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.city-search-input {
+  flex: 1;
+  padding: 11px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+  background: var(--color-background);
+  color: var(--color-heading);
+  transition:
+    border-color 0.2s ease,
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.city-search-input:focus {
+  border-color: #4c8bf5;
+  box-shadow: 0 0 0 3px rgba(76, 139, 245, 0.15);
+}
+
+.city-search-btn {
+  flex-shrink: 0;
+  border: 1px solid #4c8bf5;
+  background: #4c8bf5;
+  color: #fff;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.city-search-btn:hover {
+  background: #3a72d8;
+  border-color: #3a72d8;
 }
 
 .weather-card-list {
